@@ -1,0 +1,622 @@
+Author: Rémi Duraffort <ivoire@videolan.org>
+Description: Add care manpage
+Forwarded: not needed
+Last-Update: 2015-02-27
+
+--- /dev/null
++++ doc/care/care.1
+@@ -0,0 +1,614 @@
++.\" Man page generated from reStructuredText.
++.
++.TH CARE 1 "2014-11-12" "2.2.1" ""
++.SH NAME
++CARE \- Comprehensive Archiver for Reproducible Execution
++.
++.nr rst2man-indent-level 0
++.
++.de1 rstReportMargin
++\\$1 \\n[an-margin]
++level \\n[rst2man-indent-level]
++level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
++-
++\\n[rst2man-indent0]
++\\n[rst2man-indent1]
++\\n[rst2man-indent2]
++..
++.de1 INDENT
++.\" .rstReportMargin pre:
++. RS \\$1
++. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
++. nr rst2man-indent-level +1
++.\" .rstReportMargin post:
++..
++.de UNINDENT
++. RE
++.\" indent \\n[an-margin]
++.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
++.nr rst2man-indent-level -1
++.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
++.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
++..
++.SH SYNOPSIS
++.sp
++\fBcare\fP [\fIoption\fP] ... \fIcommand\fP
++.SH DESCRIPTION
++.sp
++CARE monitors the execution of the specified command to create an
++\fIarchive\fP that contains all the material required to \fIre\-execute\fP it
++in the same context.  That way, the command will be reproducible
++everywhere, even on Linux systems that are supposed to be not
++compatible with the original Linux system.  CARE is typically useful
++to get reliable bug reports, demonstrations, \fI\%artifact evaluation\fP,
++tutorials, portable applications, minimal rootfs, file\-system
++coverage, ...
++.sp
++By design, CARE does not record events at all.  Instead, it archives
++environment variables and accessed file\-system components \-\- before
++modification \-\- during the so\-called \fIinitial\fP execution.  Then, to
++reproduce this execution, the \fBre\-execute.sh\fP script embedded into
++the archive restores the environment variables and relaunches the
++command confined into the saved file\-system.  That way, both \fIinitial\fP
++and \fIreproduced\fP executions should produce the same results as they
++use the same context, assuming they do not rely on external events \-\-
++like key strokes or network packets \-\- or that these external events
++are replayed manually or automatically, using \fI\%umockdev\fP for instance.
++That means it is possible to alter explicitly the reproduced
++executions by changing content of the saved file\-system, or by
++replaying different external events.
++.SS Privacy
++.sp
++To ensure that no sensitive file can possibly leak into the archive,
++CARE \fIconceals\fP recursively the content of \fB$HOME\fP and \fB/tmp\fP,
++that is, they appear empty during the original execution.  Although,
++for consistency reasons, the content of \fB$PWD\fP is \fIrevealed\fP even if
++it is nested into the two previous paths.
++.sp
++As a consequence, a program executed under CARE may behave
++unexpectedly because a required path is not accessible anymore.  In
++this case, such a path has to be revealed explicitly.  For details,
++see the options \fB\-\-concealed\-path\fP and \fB\-\-revealed\-path\fP, and the
++file \fBconcealed\-accesses.txt\fP as well.
++.sp
++It is advised to inspect the archived content before sharing it.
++.SH OPTIONS
++.sp
++The command\-line interface is composed of two parts: first CARE\(aqs
++options, then the command to launch.  This section describes the
++options supported by CARE, that is, the first part of its command\-line
++interface.
++.INDENT 0.0
++.TP
++.BI \-o \ path\fP,\fB \ \-\-output\fB= path
++Archive in \fIpath\fP, its suffix specifies the format.
++.sp
++The suffix of \fIpath\fP is used to select the archive format, it can
++be one of the following:
++.TS
++center;
++|l|l|.
++_
++T{
++suffix
++T}	T{
++comment
++T}
++_
++T{
++/
++T}	T{
++don\(aqt archive, copy into the specified directory instead
++T}
++_
++T{
++\&.tar
++T}	T{
++most common archive format
++T}
++_
++T{
++\&.cpio
++T}	T{
++most portable archive format, it can archive sockets too
++T}
++_
++T{
++?.gz
++T}	T{
++most common compression format, but slow
++T}
++_
++T{
++?.lzo
++T}	T{
++fast compression format, but uncommon
++T}
++_
++T{
++?.bin
++T}	T{
++see \fBSelf\-extracting format\fP section
++T}
++_
++T{
++?.?.bin
++T}	T{
++see \fBSelf\-extracting format\fP section
++T}
++_
++T{
++\&.bin
++T}	T{
++see \fBSelf\-extracting format\fP section
++T}
++_
++T{
++\&.raw
++T}	T{
++recommended archive format, use \fIcare \-x\fP to extract
++T}
++_
++.TE
++.sp
++where "?" means the suffix must be combined with another one.  For
++examples: ".tar.lzo", ".cpio.gz", ".tar.bin", ".cpio.lzo.bin", ...
++If this option is not specified, the default output path is
++\fBcare\-<DATE>.bin\fP or \fBcare\-<DATE>.raw\fP, depending on whether
++CARE was built with self\-extracting format support or not.
++.TP
++.BI \-c \ path\fP,\fB \ \-\-concealed\-path\fB= path
++Make \fIpath\fP content appear empty during the original execution.
++.sp
++Some paths may contain sensitive data that should never be
++archived.  This is typically the case for most of the files in:
++.INDENT 7.0
++.IP \(bu 2
++$HOME
++.IP \(bu 2
++/tmp
++.UNINDENT
++.sp
++That\(aqs why these directories are recursively \fIconcealed\fP from the
++original execution, unless the \fB\-d\fP option is specified.
++Concealed paths appear empty during the original execution, as a
++consequence their original content can\(aqt be accessed nor archived.
++.TP
++.BI \-r \ path\fP,\fB \ \-\-revealed\-path\fB= path
++Make \fIpath\fP content accessible when nested in a concealed path.
++.sp
++Concealed paths might make the original execution with CARE behave
++differently from an execution without CARE.  For example, a lot of
++\fBNo such file or directory\fP errors might appear.  The solution
++is to \fIreveal\fP recursively any required paths that would be nested
++into a \fIconcealed\fP path.  Note that \fB$PWD\fP is \fIrevealed\fP, unless
++the \fB\-d\fP option is specified.
++.TP
++.BI \-p \ path\fP,\fB \ \-\-volatile\-path\fB= path
++Don\(aqt archive \fIpath\fP content, reuse actual \fIpath\fP instead.
++.sp
++Some paths contain only communication means with programs that
++can\(aqt be monitored by CARE, like the kernel or a remote server.
++Such paths are said \fIvolatile\fP; they shouldn\(aqt be archived,
++instead they must be accessed from the \fIactual\fP rootfs during the
++re\-execution.  This is typically the case for the following pseudo
++file\-systems, sockets, and authority files:
++.INDENT 7.0
++.IP \(bu 2
++/dev
++.IP \(bu 2
++/proc
++.IP \(bu 2
++/sys
++.IP \(bu 2
++/run/shm
++.IP \(bu 2
++/tmp/.X11\-unix
++.IP \(bu 2
++/tmp/.ICE\-unix
++.IP \(bu 2
++$XAUTHORITY
++.IP \(bu 2
++$ICEAUTHORITY
++.IP \(bu 2
++/var/run/dbus/system_bus_socket
++.IP \(bu 2
++/var/tmp/kdecache\-$LOGNAME
++.UNINDENT
++.sp
++This is also typically the case for any other fifos or sockets.
++These paths are considered \fIvolatile\fP, unless the \fB\-d\fP option is
++specified.
++.TP
++.BI \-e \ name\fP,\fB \ \-\-volatile\-env\fB= name
++Don\(aqt archive \fIname\fP env. variable, reuse actual value instead.
++.sp
++Some environment variables are used to communicate with programs
++that can\(aqt be monitored by CARE, like remote servers.  Such
++environment variables are said \fIvolatile\fP; they shouldn\(aqt be
++archived, instead they must be accessed from the \fIactual\fP
++environment during the re\-execution.  This is typically the case
++for the following ones:
++.INDENT 7.0
++.IP \(bu 2
++DISPLAY
++.IP \(bu 2
++http_proxy
++.IP \(bu 2
++https_proxy
++.IP \(bu 2
++ftp_proxy
++.IP \(bu 2
++all_proxy
++.IP \(bu 2
++HTTP_PROXY
++.IP \(bu 2
++HTTPS_PROXY
++.IP \(bu 2
++FTP_PROXY
++.IP \(bu 2
++ALL_PROXY
++.IP \(bu 2
++DBUS_SESSION_BUS_ADDRESS
++.IP \(bu 2
++SESSION_MANAGER
++.IP \(bu 2
++XDG_SESSION_COOKIE
++.UNINDENT
++.sp
++These environment variables are considered \fIvolatile\fP, unless the
++\fB\-d\fP option is specified.
++.TP
++.BI \-m \ value\fP,\fB \ \-\-max\-archivable\-size\fB= value
++Set the maximum size of archivable files to \fIvalue\fP megabytes.
++.sp
++To keep the CPU time and the disk space used by the archiver
++reasonable, files whose size exceeds \fIvalue\fP megabytes are
++truncated down to 0 bytes.  The default is 1GB, unless the \fB\-d\fP
++option is specified.  A negative \fIvalue\fP means no limit.
++.TP
++.B \-d\fP,\fB  \-\-ignore\-default\-config
++Don\(aqt use the default options.
++.TP
++.BI \-x \ file\fP,\fB \ \-\-extract\fB= file
++Extract content of the archive \fIfile\fP, then exit.
++.sp
++It is recommended to use this option to extract archives created
++by CARE because most extracting tools \-\- that are not based on
++libarchive \-\- are too limited to extract them correctly.
++.TP
++.BI \-v \ value\fP,\fB \ \-\-verbose\fB= value
++Set the level of debug information to \fIvalue\fP\&.
++.sp
++The higher the integer \fIvalue\fP is, the more detailed debug
++information is printed to the standard error stream.  A negative
++\fIvalue\fP makes CARE quiet except on fatal errors.
++.TP
++.B \-V\fP,\fB  \-\-version\fP,\fB  \-\-about
++Print version, copyright, license and contact, then exit.
++.TP
++.B \-h\fP,\fB  \-\-help\fP,\fB  \-\-usage
++Print the user manual, then exit.
++.UNINDENT
++.SH EXIT STATUS
++.sp
++If an internal error occurs, \fBcare\fP returns a non\-zero exit status,
++otherwise it returns the exit status of the last terminated program.
++When an error has occurred, the only way to know if it comes from the
++last terminated program or from \fBcare\fP itself is to have a look at
++the error message.
++.SH FILES
++.sp
++The output archive contains the following files:
++.INDENT 0.0
++.TP
++.B \fBre\-execute.sh\fP
++start the re\-execution of the initial command as originally
++specified.  It is also possible to specify an alternate command.
++For example, assuming \fBgcc\fP was archived, it can be re\-invoked
++differently:
++.INDENT 7.0
++.INDENT 3.5
++$ ./re\-execute.sh gcc \-\-version
++gcc (Ubuntu/Linaro 4.5.2\-8ubuntu4) 4.5.2
++.sp
++$ echo \(aqint main(void) { return puts("OK"); }\(aq > rootfs/foo.c
++$ ./re\-execute.sh gcc \-Wall /foo.c
++$ foo.c: In function "main":
++$ foo.c:1:1: warning: implicit declaration of function "puts"
++.UNINDENT
++.UNINDENT
++.TP
++.B \fBrootfs/\fP
++directory where all the files used during the original execution
++were archived, they will be required for the reproduced execution.
++.TP
++.B \fBproot\fP
++virtualization tool invoked by re\-execute.sh to confine the
++reproduced execution into the rootfs.  It also emulates the
++missing kernel features if needed.
++.TP
++.B \fBconcealed\-accesses.txt\fP
++list of accessed paths that were concealed during the original
++execution.  Its main purpose is to know what are the paths that
++should be revealed if the the original execution didn\(aqt go as
++expected.  It is absolutely useless for the reproduced execution.
++.UNINDENT
++.SH LIMITATIONS
++.sp
++It\(aqs not possible to use GDB, strace, or any programs based on
++\fIptrace\fP under CARE yet.  This latter is also based on this syscall,
++but the Linux kernel allows only one \fIptracer\fP per process.  This will
++be fixed in a future version of CARE thanks to a ptrace emulator.
++.SH EXAMPLE
++.sp
++In this example, Alice wants to report to Bob that the compilation of
++PRoot v2.4 raises an unexpected warning:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++alice$ make \-C PRoot\-2.4/src/
++
++make: Entering directory \(gaPRoot\-2.4/src\(aq
++[...]
++CC    path/proc.o
++\&./path/proc.c: In function \(aqreadlink_proc\(aq:
++\&./path/proc.c:132:3: warning: ignoring return value of \(aqstrtol\(aq
++[...]
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++Technically, Alice uses Ubuntu 11.04 for x86, whereas Bob uses
++Slackware 13.37 on x86_64.  Both distros are supposed to be shipped
++with GCC 4.5.2, however Bob is not able to reproduce this issue on his
++system:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++bob$ make \-C PRoot\-2.4/src/
++
++make: Entering directory \(gaPRoot\-2.4/src\(aq
++[...]
++CC    path/proc.o
++[...]
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++Since they don\(aqt have much time to investigate this issue by iterating
++between each other, they decide to use CARE.  First, Alice prepends
++\fBcare\fP to her command:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++alice$ care make \-C PRoot\-2.4/src/
++
++care info: concealed path: $HOME
++care info: concealed path: /tmp
++care info: revealed path: $PWD
++care info: \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
++make: Entering directory \(gaPRoot\-2.4/src\(aq
++[...]
++CC    path/proc.o
++\&./path/proc.c: In function \(aqreadlink_proc\(aq:
++\&./path/proc.c:132:3: warning: ignoring return value of \(aqstrtol\(aq
++[...]
++care info: \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
++care info: Hints:
++care info:   \- search for "conceal" in \(gacare \-h\(ga if the execution didn\(aqt go as expected.
++care info:   \- use \(ga./care\-130213072430.bin\(ga to extract the output archive.
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++Then she sends the \fBcare\-130213072430.bin\fP file to Bob.  Now, he
++should be able to reproduce her issue on his system:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++bob$ ./care\-130213072430.bin
++[...]
++bob$ ./care\-130213072430/re\-execute.sh
++
++make: Entering directory \(gaPRoot\-2.4/src\(aq
++[...]
++CC    path/proc.o
++\&./path/proc.c: In function \(aqreadlink_proc\(aq:
++\&./path/proc.c:132:3: warning: ignoring return value of \(aqstrtol\(aq
++[...]
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++So far so good!  This compiler warning doesn\(aqt make sense to Bob since
++\fBstrtol\fP is used there to check a string format; the return value is
++useless, only the \fBerrno\fP value matters.  Further investigations are
++required, so Bob re\-execute Alice\(aqs GCC differently to get more
++details:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++bob$ ./care\-130213072430/re\-execute.sh gcc \-\-version
++
++gcc (Ubuntu/Linaro 4.5.2\-8ubuntu4) 4.5.2
++Copyright (C) 2010 Free Software Foundation, Inc.
++This is free software; see the source for copying conditions.  There is NO
++warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++The same invocation on his system returns something slightly
++different:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++bob$ gcc \-\-version
++
++gcc (GCC) 4.5.2
++Copyright (C) 2010 Free Software Foundation, Inc.
++This is free software; see the source for copying conditions.  There is NO
++warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++This confirms that both GCC versions are the same, however Alice\(aqs one
++seems to have been modified by Ubuntu.  Although, according to the web
++page related to this Ubuntu package [1], no changes regarding
++\fBstrtol\fP were made.  So Bob decides to search into the files coming
++from Alice\(aqs system, that is, the \fBrootfs\fP directory in the
++archive:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++bob$ grep \-wIrl strtol ./care\-130213072430/rootfs
++
++care\-130213072430/rootfs/usr/include/inttypes.h
++care\-130213072430/rootfs/usr/include/stdlib.h
++[...]
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++Here, the file \fBusr/include/stdlib.h\fP contains a declaration of
++\fBstrtol\fP with the "warn unused result" attribute.  On Ubuntu, this
++file belongs to the EGLIBC package, and its related web page [2]
++shows that this attribute was actually wrongly introduced by the
++official EGLIBC developers.  Ultimately Bob should notify them in this
++regard.
++.sp
++Thanks to CARE, Bob was able to reproduce the issue reported by Alice
++without effort.  For investigations purpose, he was able to re\-execute
++programs differently and to search into the relevant files.
++.IP [1] 5
++\fI\%https://launchpad.net/ubuntu/oneiric/+source/gcc\-4.5/4.5.2\-8ubuntu4\fP
++.IP [2] 5
++\fI\%https://launchpad.net/ubuntu/+source/eglibc/2.13\-0ubuntu13.2\fP
++.SH SELF-EXTRACTING FORMAT
++.sp
++The self\-extracting format used by CARE starts with an extracting
++program, followed by a regular archive, and it ends with a special
++footer.  This latter contains the signature "I_LOVE_PIZZA" followed by
++the size of the embedded archive:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
+++\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
++|   extracting program   |
+++\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
++|                        |
++|    embedded archive    |
++|                        |
+++\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
++| uint8_t  signature[13] |
++| uint64_t archive_size  |  # big\-endian
+++\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.sp
++The command \fBcare \-x\fP can be used against a self\-extracting archive,
++even if they were not build for the same architecture.  For instance,
++a self\-extracting archive produced for ARM can be extracted with a
++\fBcare\fP program built for x86_64, and vice versa.  It is also
++possible to use external tools to extract the embedded archive, for
++example:
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++$ care \-o foo.tar.gz.bin /usr/bin/echo OK
++[...]
++OK
++[...]
++
++$ hexdump \-C foo.tar.gz.bin | tail \-3
++0015b5b0  00 b0 2e 00 49 5f 4c 4f  56 45 5f 50 49 5a 5a 41  |....I_LOVE_PIZZA|
++0015b5c0  00 00 00 00 00 00 12 b4  13                       |.........|
++0015b5c9
++
++$ file_size=\(gastat \-c %s foo.tar.gz.bin\(ga
++$ archive_size=$((16#12b413))
++$ footer_size=21
++$ skip=$(($file_size \- $archive_size \- $footer_size))
++
++$ dd if=foo.tar.gz.bin of=foo.tar.gz bs=1 skip=$skip count=$archive_size
++1225747+0 records in
++1225747+0 records out
++1225747 bytes (1.2 MB) copied, 2.99546 s, 409 kB/s
++
++$ file foo.tar.gz
++foo.tar.gz: gzip compressed data, from Unix
++
++$ tar \-tzf foo.tar.gz
++foo/rootfs/usr/
++[...]
++foo/re\-execute.sh
++foo/README.txt
++foo/proot
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.SH DOWNLOADS
++.sp
++CARE is heavily based on \fI\%PRoot\fP, that\(aqs why they are both hosted in
++the same repository: \fI\%http://github.proot.me\fP\&.  Since CARE is supposed
++to work on any Linux systems, it is recommended to use following
++highly compatible static binaries:
++.INDENT 0.0
++.IP \(bu 2
++for x86_64: \fI\%http://static.reproducible.io/care\-x86_64\fP
++.IP \(bu 2
++for x86: \fI\%http://static.reproducible.io/care\-x86\fP
++.IP \(bu 2
++for ARM: \fI\%http://static.reproducible.io/care\-arm\fP
++.IP \(bu 2
++other architectures: on demand.
++.UNINDENT
++.SH COLOPHON
++.sp
++Visit \fI\%http://reproducible.io\fP for help, bug reports, suggestions, patches, ...
++Copyright (C) 2014 STMicroelectronics, licensed under GPL v2 or later.
++.INDENT 0.0
++.INDENT 3.5
++.sp
++.nf
++.ft C
++  _____ ____ _____ ____
++ /   __/ __ |  __ \e  __|
++/   /_/     |     /  __|
++\e_____|__|__|__|__\e____|
++.ft P
++.fi
++.UNINDENT
++.UNINDENT
++.\" Generated by docutils manpage writer.
++.
