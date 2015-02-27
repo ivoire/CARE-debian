@@ -1,0 +1,29 @@
+Source: care
+Section: utils
+Priority: optional
+Maintainer: Rémi Duraffort <ivoire@videolan.org>
+Build-Depends: debhelper (>= 9.0.0), libtalloc-dev, libarchive-dev, uthash-dev
+Standards-Version: 3.9.6
+Homepage: http://reproducible.io
+Vcs-Git: git://github.com/ivoire/CARE-debian
+Vcs-Browser: https://github.com/ivoire/CARE-debian
+
+Package: care
+Architecture: amd64 armel armhf i386 sh4 x32
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: make linux programs reproducible on all linux systems
+ CARE monitors the execution of the specified command to create an archive that
+ contains all the material required to re-execute it in the same context.
+ .
+ That way, the command will be reproducible everywhere, even on Linux systems
+ that are supposed to be not compatible with the original Linux system. CARE is
+ typically useful to get reliable bug reports, demonstrations, artifact
+ evaluation, tutorials, portable applications, minimal rootfs, file-system
+ coverage, ...
+ .
+ By design, CARE does not record events at all. Instead, it archives
+ environment variables and accessed file-system components -- before
+ modification -- during the so-called initial execution. Then, to reproduce
+ this execution, the re-execute.sh script embedded into the archive restores
+ the environment variables and relaunches the command confined into the saved
+ file-system.
