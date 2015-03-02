@@ -4,7 +4,7 @@ Forwarded: not needed
 Last-Update: 2015-02-27
 
 --- /dev/null
-+++ doc/care/care.1
++++ a/doc/care/care.1
 @@ -0,0 +1,614 @@
 +.\" Man page generated from reStructuredText.
 +.
