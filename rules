@@ -1,5 +1,8 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
+
+export DEB_CPPFLAGS_MAINT_APPEND = -DCARE_BINARY_IS_PORTABLE
+
 %:
 	dh $@ --sourcedirectory=src
 

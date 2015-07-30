@@ -1,3 +1,9 @@
+care (2.2.1-2) unstable; urgency=low
+
+  * Enable self-extracting archives
+
+ -- Pierre Schweitzer <pierre@reactos.org>  Thu, 30 Jul 2015 15:10:05 +0200
+
 care (2.2.1-1) unstable; urgency=low
 
   * Initial release (Closes: #779349)
